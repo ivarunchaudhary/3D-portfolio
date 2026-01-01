@@ -34,18 +34,58 @@
   display: flex;
   flex-direction: column;
   margin: 0px auto;
+  width: 100%;
+  max-width: 1200px; /* Constrain width for better layout */
 }
 .career-info-box {
   display: flex;
   justify-content: space-between;
   margin-bottom: 50px;
+  position: relative; /* For the highlight segment */
+  padding: 20px 0; /* Add touch target area */
+  cursor: default;
+  transition: transform 0.3s ease;
 }
+
+/* Hover effect for the card itself */
+.career-info-box:hover {
+  transform: scale(1.02);
+}
+
+/* Highlight corresponding timeline segment on hover */
+.career-info-box::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 6px; /* Slightly wider than the line to glow */
+  transform: translateX(-50%);
+  background: #fff; /* Bright center */
+  box-shadow: 0 0 15px 2px var(--accentColor), 0 0 30px 5px #aa42ff;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1;
+  border-radius: 4px;
+}
+
+.career-info-box:hover::after {
+  opacity: 1;
+}
+
 .career-info-box p {
   width: 40%;
   font-size: 18px;
   font-weight: 300;
   margin: 0;
+  transition: color 0.3s;
 }
+
+.career-info-box:hover p {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
 .career-info-in {
   display: flex;
   width: 40%;
@@ -79,7 +119,7 @@
   top: -50px;
   left: 50%;
   transform: translateX(-50%);
-  width: 3px;
+  width: 4px; /* Increased from 3px to 4px */
   height: 100%;
   background-image: linear-gradient(
     to top,
@@ -87,6 +127,7 @@
     var(--accentColor) 50%,
     transparent 95%
   );
+  box-shadow: 0 0 15px rgba(194, 164, 255, 0.4); /* Added glow */
   max-height: 0%;
 }
 .career-dot {
@@ -95,12 +136,13 @@
   left: 50%;
   transform: translate(-50%, 50%);
   background-color: #aa42ff;
-  width: 10px;
-  height: 10px;
+  width: 12px; /* Slight increase */
+  height: 12px;
   border-radius: 50px;
   box-shadow: 0px 0px 5px 2px #d29bff, 0px 0px 15px 8px #d097ff,
     0px 0px 110px 20px #f2c0ff;
   animation: timeline 0.8s linear infinite forwards;
+  z-index: 2;
 }
 
 @keyframes timeline {
@@ -172,6 +214,15 @@
     gap: 10px;
     margin-bottom: 70px;
   }
+  
+  /* Disable highlight segment effect on mobile if layout shifts */
+  .career-info-box::after {
+    left: 0;
+    width: 4px;
+    transform: none;
+    display: none; /* Often timeline moves to side on mobile, let's check styles below */
+  }
+
   .career-info-in,
   .career-info-box p {
     width: 100%;
@@ -181,6 +232,14 @@
   .career-timeline {
     left: 0%;
   }
+  
+  /* Re-enable highlight for left-aligned timeline on mobile */
+  .career-info-box::after {
+    display: block;
+    left: 0%; /* Aligned with timeline at left 0% */
+    transform: translateX(-50%);
+  }
+
   .career-container {
     width: calc(100% - 25px);
   }

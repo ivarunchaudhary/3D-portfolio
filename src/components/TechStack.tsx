@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { useRef, useMemo, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment } from "@react-three/drei";
+import { Environment, Html } from "@react-three/drei";
 import { EffectComposer, N8AO } from "@react-three/postprocessing";
 import {
   BallCollider,
@@ -12,23 +12,19 @@ import {
 } from "@react-three/rapier";
 
 const textureLoader = new THREE.TextureLoader();
-const imageUrls = [
-  "/images/react2.webp",
-  "/images/next2.webp",
-  "/images/node2.webp",
-  "/images/express.webp",
-  "/images/mongo.webp",
-  "/images/mysql.webp",
-  "/images/typescript.webp",
-  "/images/javascript.webp",
+
+const techList = [
+  { name: "React", img: "/images/react2.webp" },
+  { name: "Next.js", img: "/images/next2.webp" },
+  { name: "Node.js", img: "/images/node2.webp" },
+  { name: "Express", img: "/images/express.webp" },
+  { name: "MongoDB", img: "/images/mongo.webp" },
+  { name: "MySQL", img: "/images/mysql.webp" },
+  { name: "TypeScript", img: "/images/typescript.webp" },
+  { name: "JavaScript", img: "/images/javascript.webp" },
 ];
-const textures = imageUrls.map((url) => textureLoader.load(url));
 
 const sphereGeometry = new THREE.SphereGeometry(1, 28, 28);
-
-const spheres = [...Array(30)].map(() => ({
-  scale: [0.7, 1, 0.8, 1, 1][Math.floor(Math.random() * 5)],
-}));
 
 type SphereProps = {
   vec?: THREE.Vector3;
@@ -36,6 +32,7 @@ type SphereProps = {
   r?: typeof THREE.MathUtils.randFloatSpread;
   material: THREE.MeshPhysicalMaterial;
   isActive: boolean;
+  name: string;
 };
 
 function SphereGeo({
@@ -44,8 +41,10 @@ function SphereGeo({
   r = THREE.MathUtils.randFloatSpread,
   material,
   isActive,
+  name,
 }: SphereProps) {
   const api = useRef<RapierRigidBody | null>(null);
+  const [hovered, setHovered] = useState(false);
 
   useFrame((_state, delta) => {
     if (!isActive) return;
@@ -82,11 +81,27 @@ function SphereGeo({
       <mesh
         castShadow
         receiveShadow
-        scale={scale}
+        scale={hovered ? scale * 1.1 : scale}
         geometry={sphereGeometry}
         material={material}
         rotation={[0.3, 1, 1]}
-      />
+        onPointerOver={() => {
+          document.body.style.cursor = "pointer";
+          setHovered(true);
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = "auto";
+          setHovered(false);
+        }}
+      >
+         {hovered && (
+          <Html distanceFactor={10}>
+            <div className="tech-tooltip">
+              {name}
+            </div>
+          </Html>
+        )}
+      </mesh>
     </RigidBody>
   );
 }
@@ -126,15 +141,21 @@ function Pointer({ vec = new THREE.Vector3(), isActive }: PointerProps) {
 
 const TechStack = () => {
   const [isActive, setIsActive] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    
     const handleScroll = () => {
       const scrollY = window.scrollY || document.documentElement.scrollTop;
-      const threshold = document
-        .getElementById("work")!
-        .getBoundingClientRect().top;
-      setIsActive(scrollY > threshold);
+      const workEl = document.getElementById("work");
+      if(workEl) {
+        const threshold = workEl.getBoundingClientRect().top;
+         setIsActive(scrollY > threshold);
+      }
     };
+    
     document.querySelectorAll(".header a").forEach((elem) => {
       const element = elem as HTMLAnchorElement;
       element.addEventListener("click", () => {
@@ -146,15 +167,23 @@ const TechStack = () => {
         }, 1000);
       });
     });
+    
     window.addEventListener("scroll", handleScroll);
     return () => {
       window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
-  const materials = useMemo(() => {
-    return textures.map(
-      (texture) =>
-        new THREE.MeshPhysicalMaterial({
+
+  const techSpheres = useMemo(() => {
+    // Generate spheres based on techList + some duplicates/fillers if needed
+    // Or just use techList repeated to fill the space
+    const items = [];
+    const count = 30;
+    for(let i=0; i<count; i++) {
+        const tech = techList[i % techList.length];
+        const texture = textureLoader.load(tech.img);
+        const material = new THREE.MeshPhysicalMaterial({
           map: texture,
           emissive: "#ffffff",
           emissiveMap: texture,
@@ -162,13 +191,22 @@ const TechStack = () => {
           metalness: 0.5,
           roughness: 1,
           clearcoat: 0.1,
-        })
-    );
-  }, []);
+        });
+        
+        // Mobile: 0.4 - 0.7, Desktop: 0.7 - 1.0
+        const scaleBase = isMobile ? 0.5 : 0.8; 
+        const scale = scaleBase + Math.random() * 0.3;
+
+        items.push({ material, scale, name: tech.name });
+    }
+    return items;
+  }, [isMobile]);
 
   return (
     <div className="techstack">
-      <h2> My Techstack</h2>
+      <div className="tech-heading-container">
+         <h2>My Techstack</h2>
+      </div>
 
       <Canvas
         shadows
@@ -189,11 +227,10 @@ const TechStack = () => {
         <directionalLight position={[0, 5, -4]} intensity={2} />
         <Physics gravity={[0, 0, 0]}>
           <Pointer isActive={isActive} />
-          {spheres.map((props, i) => (
+          {techSpheres.map((props, i) => (
             <SphereGeo
               key={i}
               {...props}
-              material={materials[Math.floor(Math.random() * materials.length)]}
               isActive={isActive}
             />
           ))}
@@ -207,6 +244,10 @@ const TechStack = () => {
           <N8AO color="#0f002c" aoRadius={2} intensity={1.15} />
         </EffectComposer>
       </Canvas>
+      
+      <div className="tech-legend">
+        <p>React - Next.js - TypeScript - Node.js - Tailwind - GSAP - Framer Motion - n8n - MongoDB - MySQL</p>
+      </div>
     </div>
   );
 };

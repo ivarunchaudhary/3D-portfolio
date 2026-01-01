@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
+import { useGLTF, Environment } from "@react-three/drei";
 import { useRef, useState, useEffect, useLayoutEffect, useMemo } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
@@ -38,14 +38,11 @@ const Lightning = () => {
     
     // Flicker effect
     groupRef.current.children.forEach((mesh) => {
-      if (mesh instanceof THREE.Mesh && mesh.name === 'lightningBolt') {
+      if (mesh instanceof THREE.Mesh) {
         if (Math.random() > 0.94) {
           mesh.visible = true;
           const mat = mesh.material as THREE.MeshBasicMaterial;
-          const baseOpacity = 0.8 + Math.random() * 0.2;
-          // Apply scroll opacity if it exists (defaults to 1 if not set yet)
-          const scrollOpacity = mesh.userData.scrollOpacity !== undefined ? mesh.userData.scrollOpacity : 1;
-          mat.opacity = baseOpacity * scrollOpacity;
+          mat.opacity = 0.8 + Math.random() * 0.2;
           
           mesh.rotation.set(
               Math.random() * 0.5,
@@ -63,7 +60,7 @@ const Lightning = () => {
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
       {bolts.map((geometry, i) => (
-        <mesh key={i} geometry={geometry} name="lightningBolt">
+        <mesh key={i} geometry={geometry}>
           <meshBasicMaterial 
             color="#aaddff" 
             transparent 
@@ -110,7 +107,7 @@ function HammerModel() {
           roughness: 0.4,
           metalness: 0.8,
           emissive: new THREE.Color("#2244ff"), 
-          emissiveIntensity: 0.55, // Increased from 0.3
+          emissiveIntensity: 0.15, // Reduced from 0.3
           transparent: true,
           opacity: 1,
         });
@@ -120,15 +117,15 @@ function HammerModel() {
 
   useFrame((state, delta) => {
     if (meshRef.current) {
-      // Idle animation: Slower
-      meshRef.current.rotation.y += delta * 0.15;
+      // Idle animation
+      meshRef.current.rotation.y += delta * 0.3;
 
-      // Hover animation: Calmer
-      const targetZ = hovered ? Math.sin(state.clock.elapsedTime * 2) * 0.02 : 0;
-      const targetX = hovered ? Math.sin(state.clock.elapsedTime * 1.5) * 0.01 : 0;
+      // Hover animation
+      const targetZ = hovered ? Math.sin(state.clock.elapsedTime * 15) * 0.05 : 0;
+      const targetX = hovered ? Math.sin(state.clock.elapsedTime * 12) * 0.02 : 0;
       
-      meshRef.current.rotation.z = THREE.MathUtils.lerp(meshRef.current.rotation.z, targetZ, 0.05);
-      meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, targetX, 0.05);
+      meshRef.current.rotation.z = THREE.MathUtils.lerp(meshRef.current.rotation.z, targetZ, 0.1);
+      meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, targetX, 0.1);
     }
   });
 
@@ -138,48 +135,30 @@ function HammerModel() {
     if (!el) return;
 
     const trigger = ScrollTrigger.create({
-      id: "hammer",
       trigger: ".landing-section",
       start: "top top",
       end: "bottom top", 
-      scrub: true,
+      scrub: 1, // Smooth scrub
       onUpdate: (self) => {
-        // Move down less to avoid overlap
-        // StartY logic needs to match the initial position logic below
-        const startY = isMobile ? -1.5 : -0.5;
-        el.position.y = startY - self.progress * 2.5; 
+        // Move down more aggressively to "dock" or exit
+        const startY = isMobile ? -0.5 : 0;
+        const progress = self.progress;
         
-        // Scale
-        const baseScale = isMobile ? 0.55 : 0.8;
-        const targetScale = baseScale * (1 - self.progress * 0.1); // Less scaling
+        el.position.y = startY - progress * 8; // Move down further
+        
+        // Scale down slightly as it moves away
+        const baseScale = isMobile ? 0.7 : 1.2;
+        const targetScale = baseScale * (1 - progress * 0.3);
         el.scale.setScalar(targetScale);
 
-        // Opacity - fade out faster
+        // Opacity fade out
         scene.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial;
-            // Fade out completely by 70% scroll
-            mat.opacity = Math.max(0, 1 - self.progress * 1.5);
+            // Fade out faster in the second half of scroll
+            mat.opacity = Math.max(0, 1 - progress * 1.5); 
+            child.visible = mat.opacity > 0;
           }
-        });
-        
-        // Fade lightning too
-        // (Lightning component handles its own opacity flickering, but we should fade it out globally via group or logic?
-        // Since Lightning is in the group, we can't easily access its materials from here unless we traverse the group.
-        // But the group `el` contains everything. We can traverse `el` instead of `scene`.
-        el.traverse((child) => {
-             if ((child as THREE.Mesh).isMesh || (child as THREE.Line).isLine) {
-                 const mat = (child as any).material;
-                 if (mat && mat.transparent) {
-                      // We need to preserve the base opacity logic of lightning flickering
-                      // This is tricky. Let's just rely on the group moving away for now.
-                      // Or actually, if we want lightning to fade, we need to pass a prop or context.
-                 }
-             }
-             // For our specific Lightning implementation that uses userData.scrollOpacity:
-             if (child.name === 'lightningBolt') {
-                 child.userData.scrollOpacity = Math.max(0, 1 - self.progress * 1.5);
-             }
         });
       },
     });
@@ -190,15 +169,8 @@ function HammerModel() {
   }, [scene, isMobile]);
 
   // Positioning: 
-  // Desktop: Right side (x=2.2), Centered vertically (y=-0.5)
-  // Mobile: Centered horizontally (x=0), Lower (y=-1.5)
-  // Note: Viewport width at z=0 with fov 45 & dist 4 is approx 5.8 units (desktop 16:9).
-  // x=2.2 keeps it comfortably on the right third without clipping.
-  const position: [number, number, number] = isMobile 
-    ? [0, -1.5, 0] 
-    : [2.2, -0.5, 0];
-    
-  const scale = isMobile ? 0.55 : 0.8;
+  const position: [number, number, number] = [0, isMobile ? -0.5 : 0, 0];
+  const scale = isMobile ? 0.7 : 1.2; // Increased desktop scale
 
   return (
     <group ref={meshRef} position={position} scale={scale} rotation={[0.2, -0.5, 0]}>
@@ -227,9 +199,8 @@ const HammerScene = () => {
     progress.loaded();
     
     const workTrigger = ScrollTrigger.getById("work");
-    const hammerTrigger = ScrollTrigger.getById("hammer");
     ScrollTrigger.getAll().forEach((trigger) => {
-      if (trigger !== workTrigger && trigger !== hammerTrigger) {
+      if (trigger !== workTrigger) {
         trigger.kill();
       }
     });
@@ -256,12 +227,51 @@ const HammerScene = () => {
       <Canvas
         camera={{ position: [0, 0.5, 4], fov: 45 }}
         style={{ pointerEvents: 'auto' }}
-        gl={{ alpha: true, antialias: true }}
+        gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
+        shadows
       >
         <SceneSetup />
-        <ambientLight intensity={0.6} /> 
-        <directionalLight position={[0, 5, 5]} intensity={1.5} color="#ffffff" />
-        <pointLight position={[0, 1, 0]} color="#4488ff" intensity={6} distance={8} decay={1.5} />
+        
+        {/* Environment for Reflections */}
+        <Environment 
+          files="/models/char_enviorment.hdr" 
+          environmentIntensity={1}
+          blur={0.5} 
+        />
+
+        {/* Three-Point Lighting Setup */}
+        {/* Key Light: Strongest, from front-right */}
+        <directionalLight 
+          position={[5, 5, 5]} 
+          intensity={1.5} 
+          castShadow 
+          shadow-mapSize={[1024, 1024]} 
+        />
+        
+        {/* Fill Light: Weaker, from opposite side (left) to soften shadows */}
+        <pointLight 
+          position={[-5, 0, 5]} 
+          intensity={0.5} 
+          color="#eef" // Slightly cool fill
+        />
+        
+        {/* Rim Light: From behind/top to outline the shape */}
+        <spotLight 
+          position={[0, 5, -5]} 
+          intensity={3} 
+          angle={0.5} 
+          penumbra={1} 
+          color="#fff"
+        />
+
+        {/* Local "Charged" Effect Light */}
+        <pointLight 
+          position={[0, 1, 0]} 
+          color="#4488ff" 
+          intensity={2} 
+          distance={5} 
+          decay={2} 
+        />
         
         <HammerModel />
       </Canvas>
