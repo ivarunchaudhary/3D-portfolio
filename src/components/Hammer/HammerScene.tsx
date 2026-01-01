@@ -85,7 +85,6 @@ const SceneSetup = () => {
 function HammerModel() {
   const { scene } = useGLTF("/models/hammer.glb");
   const meshRef = useRef<THREE.Group>(null);
-  const [hovered, setHovered] = useState(false);
   const { viewport } = useThree();
   const isMobile = viewport.width < 5; 
 
@@ -94,6 +93,13 @@ function HammerModel() {
     scene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
+        
+        // Hide the hammer head (flat platform) - geometric cubes
+        if (mesh.name.includes("Cube")) {
+           mesh.visible = false;
+           return; 
+        }
+
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         
@@ -115,17 +121,10 @@ function HammerModel() {
     });
   }, [scene]);
 
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (meshRef.current) {
       // Idle animation
       meshRef.current.rotation.y += delta * 0.3;
-
-      // Hover animation
-      const targetZ = hovered ? Math.sin(state.clock.elapsedTime * 15) * 0.05 : 0;
-      const targetX = hovered ? Math.sin(state.clock.elapsedTime * 12) * 0.02 : 0;
-      
-      meshRef.current.rotation.z = THREE.MathUtils.lerp(meshRef.current.rotation.z, targetZ, 0.1);
-      meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, targetX, 0.1);
     }
   });
 
@@ -154,6 +153,9 @@ function HammerModel() {
         // Opacity fade out
         scene.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
+            // Keep hammer head hidden
+            if (child.name.includes("Cube")) return;
+
             const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial;
             // Fade out faster in the second half of scroll
             mat.opacity = Math.max(0, 1 - progress * 1.5); 
@@ -174,11 +176,7 @@ function HammerModel() {
 
   return (
     <group ref={meshRef} position={position} scale={scale} rotation={[0.2, -0.5, 0]}>
-      <primitive
-        object={scene}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-      />
+      <primitive object={scene} />
       <Lightning />
     </group>
   );
