@@ -132,6 +132,64 @@ export function setCharTimeline(
   }
 }
 
+export function setPageScrollAnimations() {
+  const tl1 = gsap.timeline({
+    scrollTrigger: {
+      trigger: ".landing-section",
+      start: "top top",
+      end: "bottom top",
+      scrub: true,
+      invalidateOnRefresh: true,
+    },
+  });
+  const tl2 = gsap.timeline({
+    scrollTrigger: {
+      trigger: ".about-section",
+      start: "center 55%",
+      end: "bottom top",
+      scrub: true,
+      invalidateOnRefresh: true,
+    },
+  });
+  const tl3 = gsap.timeline({
+    scrollTrigger: {
+      trigger: ".whatIDO",
+      start: "top top",
+      end: "bottom top",
+      scrub: true,
+      invalidateOnRefresh: true,
+    },
+  });
+
+  if (window.innerWidth > 1024) {
+    tl1
+      .to(".landing-container", { opacity: 0, duration: 0.4 }, 0)
+      .to(".landing-container", { y: "40%", duration: 0.8 }, 0)
+      .fromTo(".about-me", { y: "-50%" }, { y: "0%" }, 0);
+
+    tl2
+      .to(".about-section", { y: "30%", duration: 6 }, 0)
+      .to(".about-section", { opacity: 0, delay: 3, duration: 2 }, 0)
+      .fromTo(
+        ".what-box-in",
+        { display: "none" },
+        { display: "flex", duration: 0.1, delay: 6 },
+        0
+      );
+
+    tl3.fromTo(".whatIDO", { y: 0 }, { y: "15%", duration: 2 }, 0);
+  } else {
+    const tM2 = gsap.timeline({
+      scrollTrigger: {
+        trigger: ".what-box-in",
+        start: "top 70%",
+        end: "bottom top",
+      },
+    });
+    tM2.to(".what-box-in", { display: "flex", duration: 0.1, delay: 0 }, 0);
+  }
+}
+
 export function setAllTimeline() {
   const careerTimeline = gsap.timeline({
     scrollTrigger: {
