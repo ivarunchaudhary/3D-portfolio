@@ -6,7 +6,7 @@
   font-optical-sizing: auto;
   font-style: normal;
   line-height: 1.5;
-  scroll-behavior: smooth;
+  /* scroll-behavior: smooth; Removed for Lenis */
   color-scheme: light dark;
   color: #eae5ec;
   background-color: var(--backgroundColor);
@@ -31,9 +31,7 @@ h5,
 h6 {
   font-family: "Geist", sans-serif;
 }
-body {
-  overflow: hidden;
-}
+/* body rule removed as it was empty */
 a {
   color: inherit;
   text-decoration: inherit;
@@ -45,6 +43,28 @@ main {
   opacity: 1;
   transition: 0.3s;
 }
+/* LENIS CSS */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+/* END LENIS CSS */
+
 .main-active {
   opacity: 0;
   animation: fadeIn 1s 1;

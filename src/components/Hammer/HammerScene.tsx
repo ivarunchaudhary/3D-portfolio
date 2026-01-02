@@ -146,7 +146,7 @@ function HammerModel() {
         el.position.y = startY - progress * 8; // Move down further
         
         // Scale down slightly as it moves away
-        const baseScale = isMobile ? 0.7 : 1.2;
+        const baseScale = isMobile ? 0.5 : 0.8;
         const targetScale = baseScale * (1 - progress * 0.3);
         el.scale.setScalar(targetScale);
 
@@ -172,7 +172,7 @@ function HammerModel() {
 
   // Positioning: 
   const position: [number, number, number] = [0, isMobile ? -0.5 : 0, 0];
-  const scale = isMobile ? 0.7 : 1.2; // Increased desktop scale
+  const scale = isMobile ? 0.5 : 0.8; // Reduced scale
 
   return (
     <group ref={meshRef} position={position} scale={scale} rotation={[0.2, -0.5, 0]}>
@@ -223,7 +223,7 @@ const HammerScene = () => {
       overflow: 'visible'
     }}>
       <Canvas
-        camera={{ position: [0, 0.5, 4], fov: 45 }}
+        camera={{ position: [0, -0.5, 4], fov: 45 }}
         style={{ pointerEvents: 'auto' }}
         gl={{ alpha: true, antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
         shadows
